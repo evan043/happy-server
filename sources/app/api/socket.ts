@@ -156,7 +156,9 @@ export function startSocket(app: Fastify) {
         machineUpdateHandler(userId, socket);
         artifactUpdateHandler(userId, socket);
         accessKeyHandler(userId, socket);
+        console.log(`[DEBUG-SOCKET.TS] About to call sessionSpawnHandler for ${userId}`);
         sessionSpawnHandler(userId, socket, connection);
+        console.log(`[DEBUG-SOCKET.TS] Finished calling sessionSpawnHandler for ${userId}`);
 
         // Ready
         log({ module: 'websocket' }, `User connected: ${userId}`);

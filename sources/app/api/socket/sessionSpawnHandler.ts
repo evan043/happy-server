@@ -7,6 +7,8 @@ import { Socket } from "socket.io";
  * Calls daemon's spawn-happy-session RPC to create daemon-spawned sessions
  */
 export function sessionSpawnHandler(userId: string, socket: Socket, connection: ClientConnection) {
+    // CRITICAL DEBUG: Bypass pino to confirm handler is called
+    console.log(`[DEBUG-2024-12-24-BYPASS] sessionSpawnHandler CALLED - socket: ${socket.id}, userId: ${userId}, type: ${connection.connectionType}`);
     log({ module: 'websocket' }, `[SESSION SPAWN HANDLER] Registering session:spawn handler for socket ${socket.id}, userId: ${userId}, connectionType: ${connection.connectionType}`);
 
     // DEBUG: Log ALL events received on this socket (MUST be outside the event handler!)
@@ -99,4 +101,4 @@ export function sessionSpawnHandler(userId: string, socket: Socket, connection: 
         }
     });
 }
-// Force rebuild Wed, Dec 24, 2025 12:06:46 PM
+// Force rebuild Wed, Dec 24, 2025 12:25:00 PM - CONSOLE.LOG DEBUG
