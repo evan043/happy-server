@@ -20,6 +20,7 @@ export function devRoutes(app: Fastify) {
                     200: z.object({
                         success: z.literal(true),
                         token: z.string(),
+                        secret: z.string(),
                         accountId: z.string(),
                         message: z.string()
                     }),
@@ -56,13 +57,18 @@ export function devRoutes(app: Fastify) {
 
             const token = await auth.createToken(account.id);
 
+            // Generate a random secret for CLI's legacy credentials format
+            const secretBytes = crypto.randomBytes(32);
+            const secret = secretBytes.toString('base64');
+
             log({ module: 'bootstrap' }, `Bootstrap successful for account: ${account.id}`);
 
             return reply.send({
                 success: true as const,
                 token,
+                secret,
                 accountId: account.id,
-                message: 'Bootstrap successful. Save this token in ~/.happy/access.key'
+                message: 'Bootstrap successful. Save credentials JSON to ~/.happy/access.key'
             });
         });
     }
