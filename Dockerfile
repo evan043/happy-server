@@ -1,6 +1,10 @@
 # Stage 1: Building the application
 FROM node:20 AS builder
 
+# Cache busting - change this value to force rebuild
+ARG CACHEBUST=1
+RUN echo "Cache bust: ${CACHEBUST} - $(date)"
+
 # Install dependencies
 RUN apt-get update && apt-get install -y python3 ffmpeg make g++ build-essential && rm -rf /var/lib/apt/lists/*
 
@@ -12,6 +16,10 @@ COPY ./prisma ./prisma
 
 # Install dependencies
 RUN yarn install --frozen-lockfile --ignore-engines
+
+# Force source copy to always run fresh (cache bust before COPY)
+ARG SOURCEBUST=1
+RUN echo "Source bust: ${SOURCEBUST} - $(date)"
 
 # Copy the rest of the application code
 COPY ./tsconfig.json ./tsconfig.json
@@ -42,4 +50,4 @@ COPY --from=builder /app/sources ./sources
 EXPOSE 3000
 
 # Command to run the application
-CMD ["yarn", "start"] 
+CMD ["yarn", "start"]
