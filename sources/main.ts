@@ -1,12 +1,3 @@
-// ===============================================
-// BUILD MARKER: 2024-12-24 12:40:00 CST
-// If you see this in logs, NEW CODE IS RUNNING!
-// ===============================================
-console.log('==================================================');
-console.log('HAPPY-SERVER BUILD: 2024-12-24 12:40:00 CST');
-console.log('NEW CODE DEPLOYED SUCCESSFULLY!');
-console.log('==================================================');
-
 import { startApi } from "@/app/api/api";
 import { log } from "@/utils/log";
 import { awaitShutdown, onShutdown } from "@/utils/shutdown";
@@ -20,6 +11,14 @@ import { startDatabaseMetricsUpdater } from "@/app/monitoring/metrics2";
 import { initEncrypt } from "./modules/encrypt";
 import { initGithub } from "./modules/github";
 import { loadFiles } from "./storage/files";
+
+// ===============================================
+// BUILD MARKER - Using pino so Railway captures it
+// ===============================================
+log({ module: 'BUILD' }, '==================================================');
+log({ module: 'BUILD' }, 'HAPPY-SERVER BUILD: 2024-12-24 12:55:00 CST');
+log({ module: 'BUILD' }, 'COMMIT: force-fresh-deploy-xmas-1255');
+log({ module: 'BUILD' }, '==================================================');
 
 async function main() {
 
