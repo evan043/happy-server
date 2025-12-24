@@ -1,7 +1,60 @@
 import { z } from 'zod';
 import { Fastify } from '../types';
+import { db } from '@/storage/db';
+import { auth } from '@/app/auth/auth';
+import { log } from '@/utils/log';
+import * as crypto from 'crypto';
 
 export function devRoutes(app: Fastify) {
+
+    // Bootstrap endpoint for self-hosted servers (only when explicitly enabled)
+    if (process.env.ALLOW_BOOTSTRAP === 'true') {
+        log({ module: 'bootstrap' }, 'ALLOW_BOOTSTRAP is enabled - bootstrap endpoint is accessible');
+
+        app.post('/v1/bootstrap', {
+            schema: {
+                body: z.object({
+                    username: z.string().optional()
+                }).optional(),
+                response: {
+                    200: z.object({
+                        success: z.literal(true),
+                        token: z.string(),
+                        accountId: z.string(),
+                        message: z.string()
+                    }),
+                    403: z.object({
+                        error: z.string()
+                    })
+                }
+            }
+        }, async (request, reply) => {
+            log({ module: 'bootstrap' }, 'Bootstrap auth request received');
+
+            const publicKeyBytes = crypto.randomBytes(32);
+            const publicKeyHex = publicKeyBytes.toString('hex');
+
+            const account = await db.account.upsert({
+                where: { publicKey: publicKeyHex },
+                update: { updatedAt: new Date() },
+                create: {
+                    publicKey: publicKeyHex,
+                    username: request.body?.username || 'admin'
+                }
+            });
+
+            const token = await auth.createToken(account.id);
+
+            log({ module: 'bootstrap' }, `Bootstrap account created successfully: ${account.id}`);
+
+            return reply.send({
+                success: true as const,
+                token,
+                accountId: account.id,
+                message: 'Bootstrap successful. Save this token in ~/.happy/access.key'
+            });
+        });
+    }
 
     // Combined logging endpoint (only when explicitly enabled)
     if (process.env.DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING) {
