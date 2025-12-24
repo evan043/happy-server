@@ -1,6 +1,6 @@
 import { sessionAliveEventsCounter, websocketEventsCounter } from "@/app/monitoring/metrics2";
 import { activityCache } from "@/app/presence/sessionCache";
-import { buildNewMessageUpdate, buildSessionActivityEphemeral, buildUpdateSessionUpdate, ClientConnection, eventRouter } from "@/app/events/eventRouter";
+import { buildNewMessageUpdate, buildSessionActivityEphemeral, buildUpdateSessionUpdate, buildMessageForStdin, ClientConnection, eventRouter } from "@/app/events/eventRouter";
 import { db } from "@/storage/db";
 import { allocateSessionSeq, allocateUserSeq } from "@/storage/seq";
 import { AsyncLock } from "@/utils/lock";
@@ -237,6 +237,14 @@ export function sessionUpdateHandler(userId: string, socket: Socket, connection:
                     payload: updatePayload,
                     recipientFilter: { type: 'all-interested-in-session', sessionId: sid },
                     skipSenderConnection: connection
+                });
+
+                // Emit message to machines subscribed to this session (for CLI stdin routing)
+                const messageForStdin = buildMessageForStdin(sid, msg.id, message);
+                eventRouter.emitEphemeral({
+                    userId,
+                    payload: messageForStdin,
+                    recipientFilter: { type: 'machine-subscribed-to-session', sessionId: sid }
                 });
             } catch (error) {
                 log({ module: 'websocket', level: 'error' }, `Error in message handler: ${error}`);

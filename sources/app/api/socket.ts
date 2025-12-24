@@ -131,6 +131,17 @@ export function startSocket(app: Fastify) {
             }
         });
 
+        // Machine subscription handler
+        socket.on('machine:subscribe-session', (data: { sessionId: string }) => {
+            if (clientType !== 'machine-scoped') return;
+            const conn = eventRouter.getConnection(socket.id);
+            if (conn && conn.connectionType === 'machine-scoped') {
+                conn.subscribedSessions = conn.subscribedSessions || new Set();
+                conn.subscribedSessions.add(data.sessionId);
+                log({ module: 'websocket' }, `Machine ${machineId} subscribed to session ${data.sessionId}`);
+            }
+        });
+
         // Handlers
         let userRpcListeners = rpcListeners.get(userId);
         if (!userRpcListeners) {

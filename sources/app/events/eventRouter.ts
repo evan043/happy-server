@@ -24,6 +24,7 @@ export interface MachineScopedConnection {
     socket: Socket;
     userId: string;
     machineId: string;
+    subscribedSessions?: Set<string>;  // Sessions this machine is listening for messages
 }
 
 export type ClientConnection = SessionScopedConnection | UserScopedConnection | MachineScopedConnection;
@@ -34,7 +35,8 @@ export type RecipientFilter =
     | { type: 'all-interested-in-session'; sessionId: string }
     | { type: 'user-scoped-only' }
     | { type: 'machine-scoped-only'; machineId: string }  // For update-machine: sends to user-scoped + only the specific machine
-    | { type: 'all-user-authenticated-connections' };
+    | { type: 'all-user-authenticated-connections' }
+    | { type: 'machine-subscribed-to-session'; sessionId: string };  // For Web UI→CLI message routing
 
 // === UPDATE EVENT TYPES (Persistent) ===
 
@@ -179,6 +181,12 @@ export type EphemeralEvent = {
     machineId: string;
     online: boolean;
     timestamp: number;
+} | {
+    type: 'message-for-stdin';  // Web UI → CLI daemon message routing
+    sessionId: string;
+    messageId: string;
+    content: string;  // Encrypted message content
+    timestamp: number;
 };
 
 // === EVENT PAYLOAD TYPES ===
@@ -224,6 +232,17 @@ class EventRouter {
 
     getConnections(userId: string): Set<ClientConnection> | undefined {
         return this.userConnections.get(userId);
+    }
+
+    getConnection(socketId: string): ClientConnection | undefined {
+        for (const connections of this.userConnections.values()) {
+            for (const conn of connections) {
+                if (conn.socket.id === socketId) {
+                    return conn;
+                }
+            }
+        }
+        return undefined;
     }
 
     // === EVENT EMISSION METHODS ===
@@ -293,6 +312,13 @@ class EventRouter {
             case 'all-user-authenticated-connections':
                 // Send to all connection types (default behavior)
                 return true;
+
+            case 'machine-subscribed-to-session':
+                // Only send to machine-scoped connections that have subscribed to this session
+                if (connection.connectionType === 'machine-scoped') {
+                    return connection.subscribedSessions?.has(filter.sessionId) || false;
+                }
+                return false;
 
             default:
                 return false;
@@ -516,6 +542,20 @@ export function buildMachineStatusEphemeral(machineId: string, online: boolean):
         type: 'machine-status',
         machineId,
         online,
+        timestamp: Date.now()
+    };
+}
+
+export function buildMessageForStdin(
+    sessionId: string,
+    messageId: string,
+    content: string
+): EphemeralPayload {
+    return {
+        type: 'message-for-stdin',
+        sessionId,
+        messageId,
+        content,
         timestamp: Date.now()
     };
 }
