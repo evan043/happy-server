@@ -31,21 +31,32 @@ export function devRoutes(app: Fastify) {
         }, async (request, reply) => {
             log({ module: 'bootstrap' }, 'Bootstrap auth request received');
 
-            const publicKeyBytes = crypto.randomBytes(32);
-            const publicKeyHex = publicKeyBytes.toString('hex');
+            const username = request.body?.username || 'admin';
 
-            const account = await db.account.upsert({
-                where: { publicKey: publicKeyHex },
-                update: { updatedAt: new Date() },
-                create: {
-                    publicKey: publicKeyHex,
-                    username: request.body?.username || 'admin'
-                }
+            // First check if account with this username already exists
+            let account = await db.account.findFirst({
+                where: { username }
             });
+
+            if (account) {
+                log({ module: 'bootstrap' }, `Found existing account: ${account.id}`);
+            } else {
+                // Create new account with random public key
+                const publicKeyBytes = crypto.randomBytes(32);
+                const publicKeyHex = publicKeyBytes.toString('hex');
+
+                account = await db.account.create({
+                    data: {
+                        publicKey: publicKeyHex,
+                        username
+                    }
+                });
+                log({ module: 'bootstrap' }, `Created new account: ${account.id}`);
+            }
 
             const token = await auth.createToken(account.id);
 
-            log({ module: 'bootstrap' }, `Bootstrap account created successfully: ${account.id}`);
+            log({ module: 'bootstrap' }, `Bootstrap successful for account: ${account.id}`);
 
             return reply.send({
                 success: true as const,
