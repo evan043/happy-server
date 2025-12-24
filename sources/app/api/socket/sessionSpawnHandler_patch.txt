@@ -1,0 +1,4 @@
+export function sessionSpawnHandler(userId: string, socket: Socket, connection: ClientConnection) {
+    log({ module: 'websocket' }, '[SESSION SPAWN HANDLER] Registering session:spawn handler for socket ' + socket.id + ', userId: ' + userId + ', connectionType: ' + connection.connectionType);
+
+    socket.on('session:spawn', async (data: { directory: string; machineId?: string }, callback: (response: any) => void) => {

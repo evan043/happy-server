@@ -7,13 +7,6 @@ import { Socket } from "socket.io";
  * Calls daemon's spawn-happy-session RPC to create daemon-spawned sessions
  */
 export function sessionSpawnHandler(userId: string, socket: Socket, connection: ClientConnection) {
-    log({ module: 'websocket' }, `[SESSION SPAWN HANDLER] Registering session:spawn handler for socket ${socket.id}, userId: ${userId}, connectionType: ${connection.connectionType}`);
-
-    // DEBUG: Log ALL events received on this socket (MUST be outside the event handler!)
-    socket.onAny((eventName, ...args) => {
-        log({ module: 'websocket' }, `[SOCKET DEBUG] Event: ${eventName}, args: ${args.length}, socketId: ${socket.id}, userId: ${userId}`);
-    });
-
     socket.on('session:spawn', async (data: { directory: string; machineId?: string }, callback: (response: any) => void) => {
         try {
             log({ module: 'websocket' }, `[SESSION SPAWN] Received request from ${socket.id} (userId: ${userId}): directory=${data.directory}, machineId=${data.machineId || 'any'}`);
