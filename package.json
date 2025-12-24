@@ -1,6 +1,6 @@
 {
   "name": "happy-server",
-  "version": "0.0.0",
+  "version": "0.0.1-force-rebuild",
   "repository": "https://github.com/slopus/happy-server.git",
   "author": "Steve Korshakov <steve@korshakov.com>",
   "license": "MIT",

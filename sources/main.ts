@@ -12,15 +12,14 @@ import { initEncrypt } from "./modules/encrypt";
 import { initGithub } from "./modules/github";
 import { loadFiles } from "./storage/files";
 
-// ===============================================
-// BUILD MARKER - Using pino so Railway captures it
-// ===============================================
-log({ module: 'BUILD' }, '==================================================');
-log({ module: 'BUILD' }, 'HAPPY-SERVER BUILD: 2024-12-24 12:55:00 CST');
-log({ module: 'BUILD' }, 'COMMIT: force-fresh-deploy-xmas-1255');
-log({ module: 'BUILD' }, '==================================================');
-
 async function main() {
+    // ===============================================
+    // BUILD MARKER - Inside main() to ensure pino is ready
+    // ===============================================
+    log({ module: 'BUILD' }, '==================================================');
+    log({ module: 'BUILD' }, 'HAPPY-SERVER v0.0.1-force-rebuild');
+    log({ module: 'BUILD' }, 'BUILD: 2024-12-24 12:58:00 CST XMAS-EDITION');
+    log({ module: 'BUILD' }, '==================================================');
 
     // Storage
     await db.$connect();
