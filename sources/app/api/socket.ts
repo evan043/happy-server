@@ -12,6 +12,7 @@ import { sessionUpdateHandler } from "./socket/sessionUpdateHandler";
 import { machineUpdateHandler } from "./socket/machineUpdateHandler";
 import { artifactUpdateHandler } from "./socket/artifactUpdateHandler";
 import { accessKeyHandler } from "./socket/accessKeyHandler";
+import { sessionSpawnHandler } from "./socket/sessionSpawnHandler";
 
 export function startSocket(app: Fastify) {
     const io = new Server(app.server, {
@@ -155,6 +156,7 @@ export function startSocket(app: Fastify) {
         machineUpdateHandler(userId, socket);
         artifactUpdateHandler(userId, socket);
         accessKeyHandler(userId, socket);
+        sessionSpawnHandler(userId, socket, connection);
 
         // Ready
         log({ module: 'websocket' }, `User connected: ${userId}`);
