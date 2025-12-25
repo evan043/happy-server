@@ -245,6 +245,23 @@ class EventRouter {
         return undefined;
     }
 
+
+    /**
+     * Get all machine-scoped connections across ALL users.
+     * Used for session:spawn when web UI and daemon have different userIds.
+     */
+    getAllMachineConnections(): MachineScopedConnection[] {
+        const machineConnections: MachineScopedConnection[] = [];
+        for (const connections of this.userConnections.values()) {
+            for (const conn of connections) {
+                if (conn.connectionType === 'machine-scoped') {
+                    machineConnections.push(conn as MachineScopedConnection);
+                }
+            }
+        }
+        return machineConnections;
+    }
+
     // === EVENT EMISSION METHODS ===
 
     emitUpdate(params: {

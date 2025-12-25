@@ -1,10 +1,14 @@
-import { ClientConnection, eventRouter } from "@/app/events/eventRouter";
+import { ClientConnection, eventRouter, MachineScopedConnection } from "@/app/events/eventRouter";
 import { log } from "@/utils/log";
 import { Socket } from "socket.io";
 
 /**
  * Handler for session:spawn requests from Web UI
  * Calls daemon's spawn-happy-session RPC to create daemon-spawned sessions
+ * 
+ * CROSS-USER MACHINE LOOKUP: If no machine is found for the requesting user,
+ * we search across ALL connected machines (any user) since web UI and daemon
+ * may authenticate with different userIds.
  */
 export function sessionSpawnHandler(userId: string, socket: Socket, connection: ClientConnection) {
     log({ module: 'websocket' }, `[SESSION SPAWN HANDLER] Registering session:spawn handler for socket ${socket.id}, userId: ${userId}, connectionType: ${connection.connectionType}`);
@@ -18,36 +22,45 @@ export function sessionSpawnHandler(userId: string, socket: Socket, connection: 
         try {
             log({ module: 'websocket' }, `[SESSION SPAWN] Received request from ${socket.id} (userId: ${userId}): directory=${data.directory}, machineId=${data.machineId || 'any'}`);
 
-            // Find machine-scoped connection for this user
+            // First: Try to find machine-scoped connection for this specific user
             const connections = eventRouter.getConnections(userId);
-            log({ module: 'websocket' }, `[SESSION SPAWN] Found ${connections?.size || 0} total connections for user ${userId}`);
+            log({ module: 'websocket' }, `[SESSION SPAWN] Found ${connections?.size || 0} connections for user ${userId}`);
 
-            if (!connections) {
-                log({ module: 'websocket', level: 'error' }, `[SESSION SPAWN] No connections found for user ${userId}`);
-                callback({ ok: false, error: 'No daemon connected' });
-                return;
+            let machineConnection: MachineScopedConnection | undefined;
+
+            // Debug: log all user connections
+            if (connections) {
+                for (const conn of connections) {
+                    log({ module: 'websocket' }, `[SESSION SPAWN] User connection - type: ${conn.connectionType}, socketId: ${conn.socket.id}${conn.connectionType === 'machine-scoped' ? `, machineId: ${conn.machineId}` : ''}`);
+                    if (conn.connectionType === 'machine-scoped') {
+                        if (!data.machineId || conn.machineId === data.machineId) {
+                            machineConnection = conn;
+                            log({ module: 'websocket' }, `[SESSION SPAWN] Found machine in user's connections: ${conn.machineId}`);
+                            break;
+                        }
+                    }
+                }
             }
 
-            // Debug: log all connections
-            for (const conn of connections) {
-                log({ module: 'websocket' }, `[SESSION SPAWN] Connection type: ${conn.connectionType}, socketId: ${conn.socket.id}, userId: ${conn.userId}${conn.connectionType === 'machine-scoped' ? `, machineId: ${conn.machineId}` : ''}`);
-            }
+            // Second: If no machine found for this user, search ALL users
+            // This handles the case where daemon and web UI authenticate with different userIds
+            if (!machineConnection) {
+                log({ module: 'websocket' }, `[SESSION SPAWN] No machine found for user ${userId}, searching across ALL users...`);
+                const allMachines = eventRouter.getAllMachineConnections();
+                log({ module: 'websocket' }, `[SESSION SPAWN] Found ${allMachines.length} total machine connections across all users`);
 
-            let machineConnection: ClientConnection | undefined;
-            for (const conn of connections) {
-                if (conn.connectionType === 'machine-scoped') {
-                    log({ module: 'websocket' }, `[SESSION SPAWN] Found machine-scoped connection: machineId=${conn.machineId}, requested=${data.machineId || 'any'}`);
-                    // If machineId specified, match it; otherwise use first machine
-                    if (!data.machineId || conn.machineId === data.machineId) {
-                        machineConnection = conn;
-                        log({ module: 'websocket' }, `[SESSION SPAWN] Selected machine ${conn.machineId} for spawn`);
+                for (const machine of allMachines) {
+                    log({ module: 'websocket' }, `[SESSION SPAWN] Available machine: machineId=${machine.machineId}, userId=${machine.userId}`);
+                    if (!data.machineId || machine.machineId === data.machineId) {
+                        machineConnection = machine;
+                        log({ module: 'websocket' }, `[SESSION SPAWN] Selected cross-user machine: ${machine.machineId} (userId: ${machine.userId})`);
                         break;
                     }
                 }
             }
 
-            if (!machineConnection || machineConnection.connectionType !== 'machine-scoped') {
-                log({ module: 'websocket', level: 'error' }, `[SESSION SPAWN] No machine-scoped connection found (total machine connections: ${Array.from(connections).filter(c => c.connectionType === 'machine-scoped').length})`);
+            if (!machineConnection) {
+                log({ module: 'websocket', level: 'error' }, `[SESSION SPAWN] No machine-scoped connection found anywhere`);
                 callback({ ok: false, error: 'No daemon available for session spawn' });
                 return;
             }
@@ -99,4 +112,4 @@ export function sessionSpawnHandler(userId: string, socket: Socket, connection: 
         }
     });
 }
-// Force rebuild Wed, Dec 24, 2025 12:25:00 PM - CONSOLE.LOG DEBUG
+// Force rebuild - CROSS-USER MACHINE LOOKUP enabled
